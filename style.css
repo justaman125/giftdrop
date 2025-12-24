@@ -1,111 +1,148 @@
-body {
+* {
+  box-sizing: border-box;
   margin: 0;
+  padding: 0;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+  background: linear-gradient(#0b1d3a, #112b55);
+  color: #fff;
+  height: 100vh;
   overflow: hidden;
-  background: linear-gradient(#1a1a1a, #000);
-  font-family: Arial, sans-serif;
-  color: white;
-  text-align: center;
 }
 
-/* Snow effect */
-body::before {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  background-image: url("https://i.imgur.com/5v2ZP0R.png");
-  animation: snow 12s linear infinite;
-  opacity: 0.4;
-}
-
-@keyframes snow {
-  from { background-position: 0 0; }
-  to { background-position: 0 1000px; }
-}
-
-.hidden {
+/* Screens */
+.screen {
   display: none;
-}
-
-#start-screen, #end-screen {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  z-index: 2;
 }
 
-button, select {
+.screen.active {
+  display: flex;
+}
+
+/* Start & End */
+h1, h2 {
+  margin-bottom: 20px;
+  letter-spacing: 1px;
+}
+
+button {
   padding: 12px 24px;
-  font-size: 20px;
+  font-size: 16px;
   border: none;
   border-radius: 6px;
-  background: #4caf50;
-  color: white;
   cursor: pointer;
-  margin-top: 10px;
+  background: #ffffff;
+  color: #000;
+  transition: transform 0.2s;
 }
 
 button:hover {
-  background: #45a049;
+  transform: scale(1.05);
 }
 
-#game {
-  width: 100vw;
-  height: 100vh;
+.difficulty {
+  margin-bottom: 20px;
+}
+
+.difficulty label {
+  margin: 0 10px;
+}
+
+/* Game Area */
+#gameScreen {
+  background: transparent;
+}
+
+#gameArea {
   position: relative;
+  width: 100%;
+  height: 100%;
 }
 
+.hud {
+  position: absolute;
+  top: 10px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 20px;
+  font-size: 18px;
+  z-index: 5;
+}
+
+/* Player */
 #player {
-  width: 90px;
-  height: 25px;
-  background: #3498db;
-  border-radius: 4px;
   position: absolute;
   bottom: 20px;
+  width: 100px;
+  height: 16px;
+  background: #ffffff;
+  border-radius: 8px;
   left: 50%;
   transform: translateX(-50%);
-  box-shadow: 0 0 10px rgba(0,0,0,0.5);
 }
 
-/* Better gift graphics */
+/* Gifts */
 .gift {
+  position: absolute;
   width: 40px;
   height: 40px;
-  background-image: url("https://i.imgur.com/8QfQ2Qp.png");
-  background-size: cover;
+  background: linear-gradient(#ff4d4d, #b30000);
+  border-radius: 6px;
+}
+
+.gift::before {
+  content: "";
   position: absolute;
-  top: 0;
-  animation: spin 1.2s linear infinite;
+  width: 6px;
+  height: 40px;
+  background: #ffd700;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-#score, #timer {
+.gift::after {
+  content: "";
   position: absolute;
-  top: 20px;
-  font-size: 32px;
-  font-weight: bold;
+  width: 40px;
+  height: 6px;
+  background: #ffd700;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
-#score {
-  left: 20px;
+/* Snow */
+#snow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
 }
 
-#timer {
-  right: 20px;
+.snowflake {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: white;
+  border-radius: 50%;
+  opacity: 0.8;
+  animation: fall linear infinite;
 }
 
-/* Mobile touch area */
-#touch-area {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  height: 40%;
-  z-index: 10;
+@keyframes fall {
+  from {
+    transform: translateY(-10px);
+  }
+  to {
+    transform: translateY(110vh);
+  }
 }
