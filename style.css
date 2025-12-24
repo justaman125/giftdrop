@@ -1,0 +1,74 @@
+body {
+  margin: 0;
+  overflow: hidden;
+  background: linear-gradient(#1a1a1a, #000);
+  font-family: Arial, sans-serif;
+  color: white;
+  text-align: center;
+}
+
+.hidden {
+  display: none;
+}
+
+#start-screen {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+#start-btn {
+  padding: 12px 24px;
+  font-size: 20px;
+  border: none;
+  border-radius: 6px;
+  background: #4caf50;
+  color: white;
+  cursor: pointer;
+}
+
+#start-btn:hover {
+  background: #45a049;
+}
+
+#game {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+}
+
+#player {
+  width: 90px;
+  height: 25px;
+  background: #3498db;
+  border-radius: 4px;
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.gift {
+  width: 30px;
+  height: 30px;
+  background: gold;
+  border-radius: 4px;
+  position: absolute;
+  top: 0;
+}
+
+#score, #timer {
+  position: absolute;
+  top: 20px;
+  font-size: 32px;
+  font-weight: bold;
+}
+
+#score {
+  left: 20px;
+}
+
+#timer {
+  right: 20px;
+}
