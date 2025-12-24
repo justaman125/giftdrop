@@ -1,119 +1,143 @@
-const startBtn = document.getElementById("start-btn");
-const playAgainBtn = document.getElementById("play-again-btn");
-const difficultySelect = document.getElementById("difficulty");
+const startScreen = document.getElementById("startScreen");
+const gameScreen = document.getElementById("gameScreen");
+const endScreen = document.getElementById("endScreen");
 
-const startScreen = document.getElementById("start-screen");
-const endScreen = document.getElementById("end-screen");
-const game = document.getElementById("game");
+const startBtn = document.getElementById("startBtn");
+const playAgainBtn = document.getElementById("playAgainBtn");
 
+const gameArea = document.getElementById("gameArea");
 const player = document.getElementById("player");
+
 const scoreEl = document.getElementById("score");
 const timerEl = document.getElementById("timer");
-const finalScoreEl = document.getElementById("final-score");
-const highScoreEl = document.getElementById("high-score");
-
-const touchArea = document.getElementById("touch-area");
+const finalScoreEl = document.getElementById("finalScore");
+const highScoreEl = document.getElementById("highScore");
 
 let score = 0;
 let timeLeft = 30;
-let gameLoop;
-let countdown;
-let fallSpeed = 5;
-let spawnRate = 600;
+let spawnInterval;
+let timerInterval;
+let difficultySettings;
+let gifts = [];
 
-startBtn.addEventListener("click", startGame);
-playAgainBtn.addEventListener("click", restartGame);
+const difficulties = {
+  easy: { speed: 2, spawn: 900 },
+  normal: { speed: 4, spawn: 600 },
+  hard: { speed: 6, spawn: 400 }
+};
 
+/* Start Game */
+startBtn.addEventListener("click", () => {
+  const difficulty = document.querySelector('input[name="difficulty"]:checked').value;
+  difficultySettings = difficulties[difficulty];
+  startScreen.classList.remove("active");
+  gameScreen.classList.add("active");
+  startGame();
+});
+
+playAgainBtn.addEventListener("click", () => {
+  endScreen.classList.remove("active");
+  startScreen.classList.add("active");
+});
+
+/* Game Logic */
 function startGame() {
-  const difficulty = difficultySelect.value;
-
-  if (difficulty === "easy") {
-    fallSpeed = 4;
-    spawnRate = 800;
-  } else if (difficulty === "normal") {
-    fallSpeed = 6;
-    spawnRate = 600;
-  } else if (difficulty === "hard") {
-    fallSpeed = 8;
-    spawnRate = 450;
-  }
-
-  startScreen.classList.add("hidden");
-  endScreen.classList.add("hidden");
-  game.classList.remove("hidden");
-
   score = 0;
   timeLeft = 30;
-  scoreEl.textContent = score;
-  timerEl.textContent = timeLeft;
+  scoreEl.textContent = "Score: 0";
+  timerEl.textContent = "Time: 30";
+  gifts.forEach(g => g.remove());
+  gifts = [];
 
-  gameLoop = setInterval(spawnGift, spawnRate);
-
-  countdown = setInterval(() => {
-    timeLeft--;
-    timerEl.textContent = timeLeft;
-
-    if (timeLeft <= 0) {
-      endGame();
-    }
-  }, 1000);
+  spawnInterval = setInterval(spawnGift, difficultySettings.spawn);
+  timerInterval = setInterval(updateTimer, 1000);
 }
 
-/* Desktop movement */
-document.addEventListener("mousemove", e => {
-  player.style.left = e.clientX - 45 + "px";
-});
+function endGame() {
+  clearInterval(spawnInterval);
+  clearInterval(timerInterval);
 
-/* Mobile movement */
-touchArea.addEventListener("touchmove", e => {
-  const touchX = e.touches[0].clientX;
-  player.style.left = touchX - 45 + "px";
-});
+  const highScore = Math.max(score, localStorage.getItem("catchGiftsHighScore") || 0);
+  localStorage.setItem("catchGiftsHighScore", highScore);
 
+  finalScoreEl.textContent = `Final Score: ${score}`;
+  highScoreEl.textContent = `High Score: ${highScore}`;
+
+  gameScreen.classList.remove("active");
+  endScreen.classList.add("active");
+}
+
+function updateTimer() {
+  timeLeft--;
+  timerEl.textContent = `Time: ${timeLeft}`;
+  if (timeLeft <= 0) endGame();
+}
+
+/* Gifts */
 function spawnGift() {
   const gift = document.createElement("div");
   gift.className = "gift";
-  gift.style.left = Math.random() * window.innerWidth + "px";
-  document.body.appendChild(gift);
+  gift.style.left = Math.random() * (window.innerWidth - 40) + "px";
+  gift.style.top = "-40px";
+  gameArea.appendChild(gift);
+  gifts.push(gift);
+}
 
-  let fall = setInterval(() => {
-    gift.style.top = (gift.offsetTop + fallSpeed) + "px";
+function updateGifts() {
+  gifts.forEach((gift, index) => {
+    gift.style.top = gift.offsetTop + difficultySettings.speed + "px";
 
-    if (gift.offsetTop > window.innerHeight - 80 &&
-        Math.abs(gift.offsetLeft - player.offsetLeft) < 70) {
+    const giftRect = gift.getBoundingClientRect();
+    const playerRect = player.getBoundingClientRect();
+
+    if (
+      giftRect.bottom >= playerRect.top &&
+      giftRect.left < playerRect.right &&
+      giftRect.right > playerRect.left
+    ) {
       score++;
-      scoreEl.textContent = score;
+      scoreEl.textContent = `Score: ${score}`;
       gift.remove();
-      clearInterval(fall);
+      gifts.splice(index, 1);
     }
 
     if (gift.offsetTop > window.innerHeight) {
       gift.remove();
-      clearInterval(fall);
+      gifts.splice(index, 1);
     }
-  }, 20);
+  });
+
+  requestAnimationFrame(updateGifts);
+}
+updateGifts();
+
+/* Player Controls */
+let playerX = window.innerWidth / 2;
+
+document.addEventListener("mousemove", e => {
+  playerX = e.clientX;
+  movePlayer();
+});
+
+document.addEventListener("touchmove", e => {
+  playerX = e.touches[0].clientX;
+  movePlayer();
+});
+
+function movePlayer() {
+  const halfWidth = player.offsetWidth / 2;
+  const x = Math.max(halfWidth, Math.min(window.innerWidth - halfWidth, playerX));
+  player.style.left = x + "px";
 }
 
-function endGame() {
-  clearInterval(gameLoop);
-  clearInterval(countdown);
+/* Snow */
+const snowContainer = document.getElementById("snow");
 
-  game.classList.add("hidden");
-  endScreen.classList.remove("hidden");
-
-  finalScoreEl.textContent = "Your score: " + score;
-
-  let highScore = localStorage.getItem("giftHighScore") || 0;
-
-  if (score > highScore) {
-    highScore = score;
-    localStorage.setItem("giftHighScore", highScore);
-  }
-
-  highScoreEl.textContent = "High score: " + highScore;
-}
-
-function restartGame() {
-  document.querySelectorAll(".gift").forEach(g => g.remove());
-  startGame();
+for (let i = 0; i < 80; i++) {
+  const snowflake = document.createElement("div");
+  snowflake.className = "snowflake";
+  snowflake.style.left = Math.random() * 100 + "vw";
+  snowflake.style.animationDuration = 5 + Math.random() * 5 + "s";
+  snowflake.style.animationDelay = Math.random() * 5 + "s";
+  snowContainer.appendChild(snowflake);
 }
