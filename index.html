@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Catch the Gifts - Santa Edition</title>
+<title>Catch the Gifts - Santa Edition with Power-ups</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
@@ -34,7 +34,6 @@ button{padding:12px 24px;font-size:16px;border:none;border-radius:6px;cursor:poi
   transform: translateX(-50%);
   box-shadow: 0 4px 8px rgba(0,0,0,0.5);
 }
-
 /* Bag flap */
 #player::before {
   content: "";
@@ -62,6 +61,14 @@ button{padding:12px 24px;font-size:16px;border:none;border-radius:6px;cursor:poi
 /* Bomb */
 .bomb{position:absolute;width:46px;height:46px;border-radius:50%;background:radial-gradient(circle at 30% 30%, #666, #000);box-shadow:0 0 12px rgba(255,0,0,.8);}
 .bomb::after{content:"";position:absolute;top:20px;left:6px;width:34px;height:6px;background:#ff3333}
+
+/* Power-ups */
+.powerup{position:absolute;width:40px;height:40px;border-radius:6px;box-shadow:0 4px 8px rgba(0,0,0,.5);text-align:center;font-size:18px;line-height:40px;font-weight:bold;color:#fff;}
+
+/* Specific power-ups */
+.power-multiplier{background:gold;color:#000;}
+.power-time{background:deepskyblue;}
+.power-magnet{background:purple;}
 
 /* Screen shake */
 .shake{animation:shake .3s}
@@ -115,40 +122,34 @@ button{padding:12px 24px;font-size:16px;border:none;border-radius:6px;cursor:poi
 const AudioCtx=window.AudioContext||window.webkitAudioContext;
 const audioCtx=new AudioCtx();
 
-/* Gift beep */
+/* Sounds */
 function beep(f,d=0.15){if(audioCtx.state==="suspended") audioCtx.resume();
   const o=audioCtx.createOscillator(),g=audioCtx.createGain();
   o.frequency.value=f;o.connect(g);g.connect(audioCtx.destination);
   o.start();g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+d);
   o.stop(audioCtx.currentTime+d);
 }
-
-/* Realistic slow low BOOM */
 function bombSound(){
   if(audioCtx.state==="suspended") audioCtx.resume();
-  // Low sine boom
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
-  osc.type = "sine";
-  osc.frequency.setValueAtTime(40, audioCtx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(20, audioCtx.currentTime + 0.6);
-  gain.gain.setValueAtTime(1, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
+  osc.type="sine";
+  osc.frequency.setValueAtTime(40,audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(20,audioCtx.currentTime+0.6);
+  gain.gain.setValueAtTime(1,audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.6);
   osc.connect(gain).connect(audioCtx.destination);
-  osc.start(); osc.stop(audioCtx.currentTime + 0.6);
-  
-  // Subtle noise overlay
+  osc.start();osc.stop(audioCtx.currentTime+0.6);
   const bufferSize = audioCtx.sampleRate * 0.6;
   const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
   const data = buffer.getChannelData(0);
   for(let i=0;i<bufferSize;i++) data[i]=(Math.random()*2-1)*0.05*Math.exp(-i/bufferSize*5);
-  const noise = audioCtx.createBufferSource();
-  noise.buffer = buffer;
+  const noise = audioCtx.createBufferSource(); noise.buffer=buffer;
   const noiseGain = audioCtx.createGain();
   noiseGain.gain.setValueAtTime(0.2,audioCtx.currentTime);
   noiseGain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.6);
   noise.connect(noiseGain).connect(audioCtx.destination);
-  noise.start(); noise.stop(audioCtx.currentTime+0.6);
+  noise.start();noise.stop(audioCtx.currentTime+0.6);
 }
 
 /* Elements */
@@ -166,6 +167,7 @@ const shieldBubble=document.getElementById("shieldBubble");
 let score=0,mult=1,timeLeft=30;
 let objs=[],spawnInt=null,timerInt=null,running=false,diff;
 let shield=false,shieldUsed=false;
+let powerActive=null,powerTimer=null;
 
 /* Difficulties */
 const difficulties={
@@ -200,7 +202,7 @@ document.getElementById("fullscreenBtn").onclick=()=>{
 function startGame(){
   clearInterval(spawnInt); clearInterval(timerInt);
   objs.forEach(o=>o.el.remove()); objs=[];
-  score=0;mult=1;shield=false;shieldUsed=false;
+  score=0;mult=1;shield=false;shieldUsed=false;powerActive=null;
   timeLeft=diff.time; running=true;
   scoreEl.textContent="Score: 0";
   multEl.textContent="Multiplier: x1";
@@ -227,10 +229,20 @@ function endGame(){
 /* Spawn */
 function spawnObj(){
   if(!running) return;
-  const isBomb=Math.random()<diff.bomb;
-  const el=document.createElement("div");
-  el.className=isBomb?"bomb":"gift";
-  if(!isBomb) el.innerHTML='<div class="ribbon-v"></div><div class="ribbon-h"></div><div class="bow"></div>';
+  const rnd=Math.random();
+  let el,isBomb=false;
+  if(rnd<diff.bomb){el=document.createElement("div");el.className="bomb";isBomb=true;}
+  else if(rnd<diff.bomb+0.08){ // powerup 8%
+    el=document.createElement("div");
+    const types=["power-multiplier","power-time","power-magnet"];
+    const t=types[Math.floor(Math.random()*types.length)];
+    el.className="powerup "+t;
+    el.dataset.type=t.split("-")[1];
+    el.textContent=el.dataset.type==="multiplier"?"x2":el.dataset.type==="time"?"+5":"M";
+  }else{
+    el=document.createElement("div");el.className="gift";
+    el.innerHTML='<div class="ribbon-v"></div><div class="ribbon-h"></div><div class="bow"></div>';
+  }
   el.style.left=Math.random()*(innerWidth-50)+"px";
   el.style.top="-60px";
   gameArea.appendChild(el);
@@ -251,17 +263,27 @@ function update(){
           if(navigator.vibrate) navigator.vibrate(200);
           if(shield){shield=false;shieldUsed=true;shieldEl.style.display="none";shieldBubble.style.display="none";}
           else endGame();
+        }else if(o.el.classList.contains("powerup")){
+          const type=o.el.dataset.type;
+          if(powerTimer){clearTimeout(powerTimer);}
+          if(type==="multiplier"){powerActive="mult";multEl.textContent="Multiplier: x"+mult+" (x2)";}
+          else if(type==="time"){timeLeft+=5;timerEl.textContent="Time: "+timeLeft";}
+          else if(type==="magnet"){powerActive="magnet";}
+          powerTimer=setTimeout(()=>{powerActive=null;multEl.textContent="Multiplier: x"+mult;},type==="time"?0:5000);
+          beep(1000);
         }else{
-          score+=mult; mult++;
+          score+=powerActive==="mult"?mult*2:mult;
+          mult++; if(powerActive!=="mult") multEl.textContent="Multiplier: x"+mult;
           if(score>=500 && !shieldUsed && !shield){shield=true; shieldEl.style.display="block"; shieldBubble.style.display="block"; beep(900);}
           scoreEl.textContent="Score: "+score;
-          multEl.textContent="Multiplier: x"+mult;
           beep(600);
         }
         o.el.remove(); objs.splice(i,1);
-      }else if(o.el.offsetTop>innerHeight){
-        if(!o.isBomb){mult=1;multEl.textContent="Multiplier: x1";}
-        o.el.remove(); objs.splice(i,1);
+      }else if(o.el.offsetTop>innerHeight){if(!o.isBomb&&!o.el.classList.contains("powerup")){mult=1;multEl.textContent="Multiplier: x1";}o.el.remove();objs.splice(i,1);}
+      // magnet effect
+      if(powerActive==="magnet"&&!o.isBomb&&!o.el.classList.contains("powerup")){
+        const dx=(p.left+p.width/2)-(o.el.offsetLeft+22);
+        o.el.style.left=(o.el.offsetLeft+dx*0.05)+"px";
       }
     });
   }
