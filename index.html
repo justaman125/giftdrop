@@ -18,6 +18,7 @@ button{padding:12px 24px;font-size:16px;border:none;border-radius:6px;cursor:poi
 #gameArea{position:relative;width:100%;height:100%}
 .hud{position:absolute;top:10px;left:0;right:0;padding:0 20px;display:flex;justify-content:space-between;font-size:18px;z-index:5}
 #multiplier{position:absolute;top:45px;left:20px}
+#shield{position:absolute;top:75px;left:20px;color:#0f0;display:none}
 #fullscreenBtn{position:absolute;top:40px;right:20px;padding:6px 12px;font-size:14px}
 
 /* Player */
@@ -35,23 +36,22 @@ button{padding:12px 24px;font-size:16px;border:none;border-radius:6px;cursor:poi
 .bow:before,.bow:after{content:"";position:absolute;width:10px;height:12px;background:#ffd700;border-radius:50% 50% 0 0}
 .bow:before{left:0}.bow:after{right:0}
 
-/* Bomb (VERY VISIBLE) */
+/* Bomb */
 .bomb{
-  position:absolute;
-  width:46px;
-  height:46px;
-  border-radius:50%;
+  position:absolute;width:46px;height:46px;border-radius:50%;
   background:radial-gradient(circle at 30% 30%, #666, #000);
   box-shadow:0 0 12px rgba(255,0,0,.8);
 }
-.bomb::after{
-  content:"";
-  position:absolute;
-  top:20px;
-  left:6px;
-  width:34px;
-  height:6px;
-  background:#ff3333;
+.bomb::after{content:"";position:absolute;top:20px;left:6px;width:34px;height:6px;background:#ff3333}
+
+/* Screen shake */
+.shake{animation:shake .3s}
+@keyframes shake{
+  0%{transform:translate(0,0)}
+  25%{transform:translate(-8px,6px)}
+  50%{transform:translate(8px,-6px)}
+  75%{transform:translate(-6px,4px)}
+  100%{transform:translate(0,0)}
 }
 
 /* Snow */
@@ -72,6 +72,7 @@ button{padding:12px 24px;font-size:16px;border:none;border-radius:6px;cursor:poi
   <label><input type="radio" name="difficulty" value="normal"> Normal</label>
   <label><input type="radio" name="difficulty" value="hard"> Hard</label>
   <label><input type="radio" name="difficulty" value="super"> Super Hard</label>
+  <label><input type="radio" name="difficulty" value="insane"> Insane</label>
   <button id="startBtn">Start Game</button>
 </div>
 
@@ -82,6 +83,7 @@ button{padding:12px 24px;font-size:16px;border:none;border-radius:6px;cursor:poi
     <div id="timer">Time: 30</div>
   </div>
   <div id="multiplier">Multiplier: x1</div>
+  <div id="shield">Shield Ready</div>
   <button id="fullscreenBtn">Fullscreen</button>
   <div id="gameArea">
     <div id="player"></div>
@@ -117,16 +119,19 @@ const gameArea=document.getElementById("gameArea");
 const scoreEl=document.getElementById("score");
 const timerEl=document.getElementById("timer");
 const multEl=document.getElementById("multiplier");
+const shieldEl=document.getElementById("shield");
 
 let score=0,mult=1,timeLeft=30;
 let objs=[],spawnInt=null,timerInt=null,running=false,diff;
+let shield=false,shieldUsed=false;
 
 /* Difficulties */
 const difficulties={
-  easy:{speed:2,spawn:900,bomb:0.08},
-  normal:{speed:4,spawn:600,bomb:0.15},
-  hard:{speed:6,spawn:400,bomb:0.25},
-  super:{speed:9,spawn:260,bomb:0.40}
+  easy:{speed:2,spawn:900,bomb:0.08,time:30},
+  normal:{speed:4,spawn:600,bomb:0.15,time:30},
+  hard:{speed:6,spawn:400,bomb:0.25,time:30},
+  super:{speed:9,spawn:260,bomb:0.40,time:30},
+  insane:{speed:13,spawn:180,bomb:0.50,time:20}
 };
 
 /* Start */
@@ -146,41 +151,35 @@ document.getElementById("playAgainBtn").onclick=()=>{
 /* Fullscreen */
 document.getElementById("fullscreenBtn").onclick=()=>{
   if(audioCtx.state==="suspended") audioCtx.resume();
-  if(!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
+  if(!document.fullscreenElement) document.documentElement.requestFullscreen();
   else document.exitFullscreen();
 };
 
 function startGame(){
-  clearInterval(spawnInt);
-  clearInterval(timerInt);
-  objs.forEach(o=>o.el.remove());
-  objs=[];
-  score=0;mult=1;timeLeft=30;
-  running=true;
+  clearInterval(spawnInt); clearInterval(timerInt);
+  objs.forEach(o=>o.el.remove()); objs=[];
+  score=0;mult=1;shield=false;shieldUsed=false;
+  timeLeft=diff.time; running=true;
 
   scoreEl.textContent="Score: 0";
   multEl.textContent="Multiplier: x1";
-  timerEl.textContent="Time: 30";
+  timerEl.textContent="Time: "+timeLeft;
+  shieldEl.style.display="none";
 
   spawnInt=setInterval(spawnObj,diff.spawn);
   timerInt=setInterval(()=>{
-    timeLeft--;
-    timerEl.textContent="Time: "+timeLeft;
+    timeLeft--; timerEl.textContent="Time: "+timeLeft;
     if(timeLeft<=0) endGame();
   },1000);
 }
 
 function endGame(){
   running=false;
-  clearInterval(spawnInt);
-  clearInterval(timerInt);
-
+  clearInterval(spawnInt); clearInterval(timerInt);
   const high=Math.max(score,localStorage.getItem("ctgHigh")||0);
   localStorage.setItem("ctgHigh",high);
-
   document.getElementById("finalScore").textContent="Final Score: "+score;
   document.getElementById("highScore").textContent="High Score: "+high;
-
   gameScreen.classList.remove("active");
   endScreen.classList.add("active");
 }
@@ -191,9 +190,7 @@ function spawnObj(){
   const isBomb=Math.random()<diff.bomb;
   const el=document.createElement("div");
   el.className=isBomb?"bomb":"gift";
-  if(!isBomb){
-    el.innerHTML='<div class="ribbon-v"></div><div class="ribbon-h"></div><div class="bow"></div>';
-  }
+  if(!isBomb) el.innerHTML='<div class="ribbon-v"></div><div class="ribbon-h"></div><div class="bow"></div>';
   el.style.left=Math.random()*(innerWidth-50)+"px";
   el.style.top="-60px";
   gameArea.appendChild(el);
@@ -206,21 +203,31 @@ function update(){
     objs.forEach((o,i)=>{
       o.el.style.top=o.el.offsetTop+diff.speed+"px";
       const r=o.el.getBoundingClientRect(),p=player.getBoundingClientRect();
-
       if(r.bottom>=p.top&&r.left<p.right&&r.right>p.left){
         if(o.isBomb){
-          beep(120,0.3);
-          endGame();
+          document.body.classList.add("shake");
+          setTimeout(()=>document.body.classList.remove("shake"),300);
+          if(shield){
+            shield=false; shieldUsed=true;
+            shieldEl.style.display="none";
+            beep(300);
+          }else{
+            beep(120,0.3);
+            endGame();
+          }
         }else{
-          score+=mult;mult++;
+          score+=mult; mult++;
+          if(score>=500 && !shieldUsed && !shield){
+            shield=true; shieldEl.style.display="block"; beep(900);
+          }
           scoreEl.textContent="Score: "+score;
           multEl.textContent="Multiplier: x"+mult;
           beep(600);
-          o.el.remove();objs.splice(i,1);
         }
+        o.el.remove(); objs.splice(i,1);
       }else if(o.el.offsetTop>innerHeight){
         if(!o.isBomb){mult=1;multEl.textContent="Multiplier: x1";}
-        o.el.remove();objs.splice(i,1);
+        o.el.remove(); objs.splice(i,1);
       }
     });
   }
