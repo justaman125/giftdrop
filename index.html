@@ -64,8 +64,6 @@ button{padding:12px 24px;font-size:16px;border:none;border-radius:6px;cursor:poi
 
 /* Power-ups */
 .powerup{position:absolute;width:40px;height:40px;border-radius:6px;box-shadow:0 4px 8px rgba(0,0,0,.5);text-align:center;font-size:18px;line-height:40px;font-weight:bold;color:#fff;}
-
-/* Specific power-ups */
 .power-multiplier{background:gold;color:#000;}
 .power-time{background:deepskyblue;}
 .power-magnet{background:purple;}
@@ -266,10 +264,10 @@ function update(){
         }else if(o.el.classList.contains("powerup")){
           const type=o.el.dataset.type;
           if(powerTimer){clearTimeout(powerTimer);}
-          if(type==="multiplier"){powerActive="mult";multEl.textContent="Multiplier: x"+mult+" (x2)";}
-          else if(type==="time"){timeLeft+=5;timerEl.textContent="Time: "+timeLeft";}
+          if(type==="multiplier"){powerActive="mult"; multEl.textContent="Multiplier: x"+mult+" (x2)";}
+          else if(type==="time"){timeLeft+=5; timerEl.textContent="Time: "+timeLeft;}
           else if(type==="magnet"){powerActive="magnet";}
-          powerTimer=setTimeout(()=>{powerActive=null;multEl.textContent="Multiplier: x"+mult;},type==="time"?0:5000);
+          powerTimer=setTimeout(()=>{powerActive=null; multEl.textContent="Multiplier: x"+mult;},type==="time"?0:5000);
           beep(1000);
         }else{
           score+=powerActive==="mult"?mult*2:mult;
@@ -280,7 +278,6 @@ function update(){
         }
         o.el.remove(); objs.splice(i,1);
       }else if(o.el.offsetTop>innerHeight){if(!o.isBomb&&!o.el.classList.contains("powerup")){mult=1;multEl.textContent="Multiplier: x1";}o.el.remove();objs.splice(i,1);}
-      // magnet effect
       if(powerActive==="magnet"&&!o.isBomb&&!o.el.classList.contains("powerup")){
         const dx=(p.left+p.width/2)-(o.el.offsetLeft+22);
         o.el.style.left=(o.el.offsetLeft+dx*0.05)+"px";
