@@ -89,6 +89,7 @@ button{padding:12px 24px;font-size:16px;border:none;border-radius:6px;cursor:poi
 <script>
 const AudioCtx=window.AudioContext||window.webkitAudioContext;
 const audioCtx=new AudioCtx();
+
 /* Gift beep */
 function beep(f,d=0.15){if(audioCtx.state==="suspended") audioCtx.resume();
   const o=audioCtx.createOscillator(),g=audioCtx.createGain();
@@ -97,31 +98,32 @@ function beep(f,d=0.15){if(audioCtx.state==="suspended") audioCtx.resume();
   o.stop(audioCtx.currentTime+d);
 }
 
-/* Realistic BOOM */
+/* Realistic slow low BOOM */
 function bombSound(){
   if(audioCtx.state==="suspended") audioCtx.resume();
-  // Noise
-  const bufferSize = audioCtx.sampleRate * 0.2;
-  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-  const data = buffer.getChannelData(0);
-  for(let i=0;i<bufferSize;i++) data[i]=(Math.random()*2-1)*Math.exp(-i/bufferSize*5);
-  const noise = audioCtx.createBufferSource();
-  noise.buffer = buffer;
-  const noiseGain = audioCtx.createGain();
-  noiseGain.gain.setValueAtTime(1,audioCtx.currentTime);
-  noiseGain.gain.exponentialRampToValueAtTime(0.01,audioCtx.currentTime+0.2);
-  noise.connect(noiseGain).connect(audioCtx.destination);
-  noise.start(); noise.stop(audioCtx.currentTime+0.2);
-  // Low kick
+  // Low sine boom
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   osc.type = "sine";
-  osc.frequency.setValueAtTime(80, audioCtx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(20, audioCtx.currentTime + 0.2);
+  osc.frequency.setValueAtTime(40, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(20, audioCtx.currentTime + 0.6);
   gain.gain.setValueAtTime(1, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
   osc.connect(gain).connect(audioCtx.destination);
-  osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+  osc.start(); osc.stop(audioCtx.currentTime + 0.6);
+  
+  // Subtle noise overlay
+  const bufferSize = audioCtx.sampleRate * 0.6;
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for(let i=0;i<bufferSize;i++) data[i]=(Math.random()*2-1)*0.05*Math.exp(-i/bufferSize*5);
+  const noise = audioCtx.createBufferSource();
+  noise.buffer = buffer;
+  const noiseGain = audioCtx.createGain();
+  noiseGain.gain.setValueAtTime(0.2,audioCtx.currentTime);
+  noiseGain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.6);
+  noise.connect(noiseGain).connect(audioCtx.destination);
+  noise.start(); noise.stop(audioCtx.currentTime+0.6);
 }
 
 /* Elements */
