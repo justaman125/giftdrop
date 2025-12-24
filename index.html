@@ -2,9 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Catch the Gifts - Santa Edition with Power-ups</title>
+<title>Catch the Gifts - Santa Edition with Power-ups & Menu</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <style>
 *{box-sizing:border-box;margin:0;padding:0;font-family:Arial,Helvetica,sans-serif}
 body{height:100vh;background:linear-gradient(#0b1d3a,#112b55);color:#fff;overflow:hidden}
@@ -20,6 +19,7 @@ button{padding:12px 24px;font-size:16px;border:none;border-radius:6px;cursor:poi
 #multiplier{position:absolute;top:45px;left:20px}
 #shieldEl{position:absolute;top:75px;left:20px;color:#0f0;display:none}
 #fullscreenBtn{position:absolute;top:40px;right:20px;padding:6px 12px;font-size:14}
+#menuBtn{position:absolute;top:100px;right:20px;padding:6px 12px;font-size:14}
 
 /* Santa bag player */
 #player {
@@ -34,7 +34,6 @@ button{padding:12px 24px;font-size:16px;border:none;border-radius:6px;cursor:poi
   transform: translateX(-50%);
   box-shadow: 0 4px 8px rgba(0,0,0,0.5);
 }
-/* Bag flap */
 #player::before {
   content: "";
   position: absolute;
@@ -76,6 +75,12 @@ button{padding:12px 24px;font-size:16px;border:none;border-radius:6px;cursor:poi
 #snow{position:absolute;inset:0;pointer-events:none;z-index:1}
 .snowflake{position:absolute;width:4px;height:4px;background:#fff;border-radius:50%;opacity:.8;animation:fall linear infinite}
 @keyframes fall{from{transform:translateY(-10px)}to{transform:translateY(110vh)}}
+
+/* Menu overlay */
+#menuOverlay{
+  position:absolute;inset:0;background:rgba(0,0,0,0.7);z-index:10;display:none;flex-direction:column;align-items:center;justify-content:center;
+}
+#menuOverlay button{margin:8px 0;width:180px;}
 </style>
 </head>
 <body>
@@ -103,9 +108,18 @@ button{padding:12px 24px;font-size:16px;border:none;border-radius:6px;cursor:poi
   <div id="shieldEl">Shield Ready</div>
   <div id="shieldBubble"></div>
   <button id="fullscreenBtn">Fullscreen</button>
+  <button id="menuBtn">Menu</button>
   <div id="gameArea">
     <div id="player"></div>
   </div>
+</div>
+
+<!-- Menu Overlay -->
+<div id="menuOverlay">
+  <button id="resumeBtn">Resume Game</button>
+  <button id="toggleSoundBtn">Toggle Sound</button>
+  <button id="toggleMusicBtn">Toggle Music</button>
+  <button id="exitBtn">Return to Start Screen</button>
 </div>
 
 <!-- End -->
@@ -119,15 +133,33 @@ button{padding:12px 24px;font-size:16px;border:none;border-radius:6px;cursor:poi
 <script>
 const AudioCtx=window.AudioContext||window.webkitAudioContext;
 const audioCtx=new AudioCtx();
+let soundOn=true, musicOn=true, musicNode=null;
+
+/* Background Music */
+function startMusic(){
+  if(!musicOn || musicNode) return;
+  if(audioCtx.state==="suspended") audioCtx.resume();
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type="sine"; osc.frequency.setValueAtTime(220,audioCtx.currentTime);
+  gain.gain.setValueAtTime(0.05,audioCtx.currentTime);
+  osc.connect(gain).connect(audioCtx.destination);
+  osc.start();
+  osc.loop = true; // Continuous tone
+  musicNode=osc;
+}
+function stopMusic(){
+  if(musicNode){musicNode.stop(); musicNode=null;}
+}
 
 /* Sounds */
-function beep(f,d=0.15){if(audioCtx.state==="suspended") audioCtx.resume();
+function beep(f,d=0.15){if(!soundOn) return; if(audioCtx.state==="suspended") audioCtx.resume();
   const o=audioCtx.createOscillator(),g=audioCtx.createGain();
   o.frequency.value=f;o.connect(g);g.connect(audioCtx.destination);
   o.start();g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+d);
   o.stop(audioCtx.currentTime+d);
 }
-function bombSound(){
+function bombSound(){if(!soundOn) return;
   if(audioCtx.state==="suspended") audioCtx.resume();
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
@@ -138,16 +170,6 @@ function bombSound(){
   gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.6);
   osc.connect(gain).connect(audioCtx.destination);
   osc.start();osc.stop(audioCtx.currentTime+0.6);
-  const bufferSize = audioCtx.sampleRate * 0.6;
-  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-  const data = buffer.getChannelData(0);
-  for(let i=0;i<bufferSize;i++) data[i]=(Math.random()*2-1)*0.05*Math.exp(-i/bufferSize*5);
-  const noise = audioCtx.createBufferSource(); noise.buffer=buffer;
-  const noiseGain = audioCtx.createGain();
-  noiseGain.gain.setValueAtTime(0.2,audioCtx.currentTime);
-  noiseGain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.6);
-  noise.connect(noiseGain).connect(audioCtx.destination);
-  noise.start();noise.stop(audioCtx.currentTime+0.6);
 }
 
 /* Elements */
@@ -161,11 +183,13 @@ const timerEl=document.getElementById("timer");
 const multEl=document.getElementById("multiplier");
 const shieldEl=document.getElementById("shieldEl");
 const shieldBubble=document.getElementById("shieldBubble");
+const menuOverlay=document.getElementById("menuOverlay");
 
 let score=0,mult=1,timeLeft=30;
 let objs=[],spawnInt=null,timerInt=null,running=false,diff;
 let shield=false,shieldUsed=false;
 let powerActive=null,powerTimer=null;
+let menuActive=false;
 
 /* Difficulties */
 const difficulties={
@@ -176,12 +200,13 @@ const difficulties={
   insane:{speed:13,spawn:180,bomb:0.50,time:20}
 };
 
-/* Start */
+/* Start Game */
 document.getElementById("startBtn").onclick=()=>{
   diff=difficulties[document.querySelector('input[name="difficulty"]:checked').value];
   startScreen.classList.remove("active");
   gameScreen.classList.add("active");
   startGame();
+  startMusic();
 };
 
 /* Play Again */
@@ -197,6 +222,28 @@ document.getElementById("fullscreenBtn").onclick=()=>{
   else document.exitFullscreen();
 };
 
+/* Menu */
+document.getElementById("menuBtn").onclick=()=>{
+  menuActive=true;
+  menuOverlay.style.display="flex";
+};
+document.getElementById("resumeBtn").onclick=()=>{
+  menuActive=false;
+  menuOverlay.style.display="none";
+};
+document.getElementById("toggleSoundBtn").onclick=()=>{soundOn=!soundOn; alert("Sound "+(soundOn?"ON":"OFF"));}
+document.getElementById("toggleMusicBtn").onclick=()=>{
+  musicOn=!musicOn; if(musicOn) startMusic(); else stopMusic();
+  alert("Music "+(musicOn?"ON":"OFF"));
+};
+document.getElementById("exitBtn").onclick=()=>{
+  menuActive=false;
+  menuOverlay.style.display="none";
+  gameScreen.classList.remove("active");
+  startScreen.classList.add("active");
+};
+
+/* Start Game Logic */
 function startGame(){
   clearInterval(spawnInt); clearInterval(timerInt);
   objs.forEach(o=>o.el.remove()); objs=[];
@@ -206,13 +253,13 @@ function startGame(){
   multEl.textContent="Multiplier: x1";
   timerEl.textContent="Time: "+timeLeft;
   shieldEl.style.display="none"; shieldBubble.style.display="none";
-  spawnInt=setInterval(spawnObj,diff.spawn);
+  spawnInt=setInterval(()=>{if(!menuActive) spawnObj();},diff.spawn);
   timerInt=setInterval(()=>{
-    timeLeft--; timerEl.textContent="Time: "+timeLeft;
-    if(timeLeft<=0) endGame();
+    if(!menuActive){timeLeft--; timerEl.textContent="Time: "+timeLeft;if(timeLeft<=0) endGame();}
   },1000);
 }
 
+/* End Game */
 function endGame(){
   running=false;
   clearInterval(spawnInt); clearInterval(timerInt);
@@ -230,7 +277,7 @@ function spawnObj(){
   const rnd=Math.random();
   let el,isBomb=false;
   if(rnd<diff.bomb){el=document.createElement("div");el.className="bomb";isBomb=true;}
-  else if(rnd<diff.bomb+0.08){ // powerup 8%
+  else if(rnd<diff.bomb+0.08){
     el=document.createElement("div");
     const types=["power-multiplier","power-time","power-magnet"];
     const t=types[Math.floor(Math.random()*types.length)];
@@ -249,7 +296,7 @@ function spawnObj(){
 
 /* Update */
 function update(){
-  if(running){
+  if(running&&!menuActive){
     objs.forEach((o,i)=>{
       o.el.style.top=o.el.offsetTop+diff.speed+"px";
       const r=o.el.getBoundingClientRect(),p=player.getBoundingClientRect();
