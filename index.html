@@ -19,7 +19,7 @@ button{padding:12px 24px;font-size:16px;border:none;border-radius:6px;cursor:poi
 .hud{position:absolute;top:10px;left:0;right:0;padding:0 20px;display:flex;justify-content:space-between;font-size:18px;z-index:5}
 #multiplier{position:absolute;top:45px;left:20px}
 #shieldEl{position:absolute;top:75px;left:20px;color:#0f0;display:none}
-#fullscreenBtn{position:absolute;top:40px;right:20px;padding:6px 12px;font-size:14px}
+#fullscreenBtn{position:absolute;top:40px;right:20px;padding:6px 12px;font-size:14}
 
 /* Player */
 #player{position:absolute;bottom:20px;width:110px;height:16px;background:#fff;border-radius:10px;left:50%;transform:translateX(-50%)}
@@ -89,21 +89,39 @@ button{padding:12px 24px;font-size:16px;border:none;border-radius:6px;cursor:poi
 <script>
 const AudioCtx=window.AudioContext||window.webkitAudioContext;
 const audioCtx=new AudioCtx();
+/* Gift beep */
 function beep(f,d=0.15){if(audioCtx.state==="suspended") audioCtx.resume();
   const o=audioCtx.createOscillator(),g=audioCtx.createGain();
   o.frequency.value=f;o.connect(g);g.connect(audioCtx.destination);
   o.start();g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+d);
   o.stop(audioCtx.currentTime+d);
 }
-/* Low boom bomb sound */
+
+/* Realistic BOOM */
 function bombSound(){
   if(audioCtx.state==="suspended") audioCtx.resume();
-  const o=audioCtx.createOscillator(),g=audioCtx.createGain();
-  o.type="sawtooth"; o.frequency.value=80;
-  g.gain.setValueAtTime(1,audioCtx.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.4);
-  o.connect(g); g.connect(audioCtx.destination);
-  o.start(); o.stop(audioCtx.currentTime+0.4);
+  // Noise
+  const bufferSize = audioCtx.sampleRate * 0.2;
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for(let i=0;i<bufferSize;i++) data[i]=(Math.random()*2-1)*Math.exp(-i/bufferSize*5);
+  const noise = audioCtx.createBufferSource();
+  noise.buffer = buffer;
+  const noiseGain = audioCtx.createGain();
+  noiseGain.gain.setValueAtTime(1,audioCtx.currentTime);
+  noiseGain.gain.exponentialRampToValueAtTime(0.01,audioCtx.currentTime+0.2);
+  noise.connect(noiseGain).connect(audioCtx.destination);
+  noise.start(); noise.stop(audioCtx.currentTime+0.2);
+  // Low kick
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(80, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(20, audioCtx.currentTime + 0.2);
+  gain.gain.setValueAtTime(1, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+  osc.connect(gain).connect(audioCtx.destination);
+  osc.start(); osc.stop(audioCtx.currentTime + 0.2);
 }
 
 /* Elements */
@@ -160,8 +178,7 @@ function startGame(){
   scoreEl.textContent="Score: 0";
   multEl.textContent="Multiplier: x1";
   timerEl.textContent="Time: "+timeLeft;
-  shieldEl.style.display="none";
-  shieldBubble.style.display="none";
+  shieldEl.style.display="none"; shieldBubble.style.display="none";
   spawnInt=setInterval(spawnObj,diff.spawn);
   timerInt=setInterval(()=>{
     timeLeft--; timerEl.textContent="Time: "+timeLeft;
