@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Catch the Gifts</title>
+<title>Catch the Gifts - Santa Edition</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
@@ -21,8 +21,33 @@ button{padding:12px 24px;font-size:16px;border:none;border-radius:6px;cursor:poi
 #shieldEl{position:absolute;top:75px;left:20px;color:#0f0;display:none}
 #fullscreenBtn{position:absolute;top:40px;right:20px;padding:6px 12px;font-size:14}
 
-/* Player */
-#player{position:absolute;bottom:20px;width:110px;height:16px;background:#fff;border-radius:10px;left:50%;transform:translateX(-50%)}
+/* Santa bag player */
+#player {
+  position: absolute;
+  bottom: 20px;
+  width: 120px;
+  height: 30px;
+  background: radial-gradient(circle at 50% 30%, #ff0000, #990000);
+  border-radius: 50% 50% 20% 20%;
+  border: 2px solid #660000;
+  left: 50%;
+  transform: translateX(-50%);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+}
+
+/* Bag flap */
+#player::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  width: 60px;
+  height: 12px;
+  background: radial-gradient(circle at 50% 50%, #ff6666, #cc0000);
+  border-radius: 50%;
+  transform: translateX(-50%);
+}
+
 /* Shield Bubble */
 #shieldBubble{position:absolute;width:130px;height:50px;border-radius:50%;border:3px solid #0f0;opacity:0.5;pointer-events:none;display:none;bottom:12px;left:50%;transform:translateX(-50%);z-index:3}
 
@@ -244,7 +269,7 @@ function update(){
 }
 update();
 
-/* Player */
+/* Player movement */
 let px=innerWidth/2;
 addEventListener("mousemove",e=>px=e.clientX);
 addEventListener("touchmove",e=>px=e.touches[0].clientX);
