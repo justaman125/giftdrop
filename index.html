@@ -19,23 +19,39 @@ button{padding:12px 24px;font-size:16px;border:none;border-radius:6px;cursor:poi
 #player {position:absolute;bottom:20px;width:120px;height:30px;background:radial-gradient(circle at 50% 30%, #ff0000, #990000);border-radius:50% 50% 20% 20%;border:2px solid #660000;left:50%;transform:translateX(-50%);box-shadow:0 4px 8px rgba(0,0,0,0.5);}
 #player::before {content:"";position:absolute;top:-6px;left:50%;width:60px;height:12px;background:radial-gradient(circle at 50% 50%, #ff6666, #cc0000);border-radius:50%;transform:translateX(-50%);}
 #shieldBubble{position:absolute;width:130px;height:50px;border-radius:50%;border:3px solid #0f0;opacity:0.5;pointer-events:none;display:none;bottom:12px;left:50%;transform:translateX(-50%);z-index:3}
+
+/* Gifts */
 .gift{position:absolute;width:44px;height:44px;border-radius:6px;background:linear-gradient(145deg,#ff5a5a,#b30000);box-shadow:0 4px 8px rgba(0,0,0,.4)}
 .ribbon-v{position:absolute;width:8px;height:100%;background:#ffd700;left:50%;transform:translateX(-50%)}
 .ribbon-h{position:absolute;height:8px;width:100%;background:#ffd700;top:50%;transform:translateY(-50%)}
 .bow{position:absolute;top:-6px;left:50%;width:20px;height:12px;transform:translateX(-50%)}
 .bow:before,.bow:after{content:"";position:absolute;width:10px;height:12px;background:#ffd700;border-radius:50% 50% 0 0}
 .bow:before{left:0}.bow:after{right:0}
+
+/* Bomb */
 .bomb{position:absolute;width:46px;height:46px;border-radius:50%;background:radial-gradient(circle at 30% 30%, #666, #000);box-shadow:0 0 12px rgba(255,0,0,.8);}
 .bomb::after{content:"";position:absolute;top:20px;left:6px;width:34px;height:6px;background:#ff3333}
+
+/* Power-ups */
 .powerup{position:absolute;width:40px;height:40px;border-radius:6px;box-shadow:0 4px 8px rgba(0,0,0,.5);text-align:center;font-size:18px;line-height:40px;font-weight:bold;color:#fff;}
 .power-multiplier{background:gold;color:#000;}
 .power-time{background:deepskyblue;}
 .power-magnet{background:purple;}
+
+/* Sparkle Effect */
+.sparkle{position:absolute;width:6px;height:6px;background:yellow;border-radius:50%;pointer-events:none;animation:fallSpark 0.5s ease-out;}
+@keyframes fallSpark{0%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(0,-30px) scale(0.2)}}
+
+/* Shake */
 .shake{animation:shake .3s}
 @keyframes shake{0%{transform:translate(0,0)}25%{transform:translate(-8px,6px)}50%{transform:translate(8px,-6px)}75%{transform:translate(-6px,4px)}100%{transform:translate(0,0)}}
+
+/* Snow */
 #snow{position:absolute;inset:0;pointer-events:none;z-index:1}
 .snowflake{position:absolute;width:4px;height:4px;background:#fff;border-radius:50%;opacity:.8;animation:fall linear infinite}
 @keyframes fall{from{transform:translateY(-10px)}to{transform:translateY(110vh)}}
+
+/* Menu Overlay */
 #menuOverlay{position:absolute;inset:0;background:rgba(0,0,0,0.7);z-index:10;display:none;flex-direction:column;align-items:center;justify-content:center;pointer-events:auto;}
 #menuOverlay button{margin:8px 0;width:180px;}
 </style>
@@ -45,11 +61,23 @@ button{padding:12px 24px;font-size:16px;border:none;border-radius:6px;cursor:poi
 
 <div id="startScreen" class="screen active">
   <h1>Catch the Gifts</h1>
-  <label><input type="radio" name="difficulty" value="easy" checked> Easy</label>
-  <label><input type="radio" name="difficulty" value="normal"> Normal</label>
-  <label><input type="radio" name="difficulty" value="hard"> Hard</label>
-  <label><input type="radio" name="difficulty" value="super"> Super Hard</label>
-  <label><input type="radio" name="difficulty" value="insane"> Insane</label>
+  <div>
+    <label><input type="radio" name="difficulty" value="easy" checked> Easy</label>
+    <label><input type="radio" name="difficulty" value="normal"> Normal</label>
+    <label><input type="radio" name="difficulty" value="hard"> Hard</label>
+    <label><input type="radio" name="difficulty" value="super"> Super Hard</label>
+    <label><input type="radio" name="difficulty" value="insane"> Insane</label>
+  </div>
+  <div style="margin-top:15px;">
+    <label>Timer: 
+      <select id="timerSelect">
+        <option value="30">30s</option>
+        <option value="60">60s</option>
+        <option value="90">90s</option>
+        <option value="0">No Limit</option>
+      </select>
+    </label>
+  </div>
   <button id="startBtn">Start Game</button>
 </div>
 
@@ -91,8 +119,7 @@ function startMusic(){
   if(!musicOn||musicGain) return;
   if(audioCtx.state==="suspended") audioCtx.resume();
   musicGain=audioCtx.createGain(); musicGain.gain.value=0.02; musicGain.connect(audioCtx.destination);
-  const notes=[261.63,329.63,392.00,523.25];
-  let i=0;
+  const notes=[261.63,329.63,392.00,523.25]; let i=0;
   function playNote(){
     if(!musicOn){musicGain.disconnect();musicGain=null;return;}
     const osc=audioCtx.createOscillator();
@@ -128,6 +155,8 @@ const difficulties={easy:{speed:2,spawn:900,bomb:0.08,time:30},normal:{speed:4,s
 /* Start / Play Again */
 document.getElementById("startBtn").onclick=()=>{
   diff=difficulties[document.querySelector('input[name="difficulty"]:checked').value];
+  const tval=parseInt(document.getElementById("timerSelect").value);
+  diff.time=tval; // override time for freestyle if 0
   startScreen.classList.remove("active");
   gameScreen.classList.add("active");
   startGame();
@@ -143,15 +172,65 @@ document.getElementById("toggleSoundBtn").onclick=()=>{soundOn=!soundOn; alert("
 document.getElementById("toggleMusicBtn").onclick=()=>{musicOn=!musicOn;if(musicOn) startMusic(); else stopMusic(); alert("Music "+(musicOn?"ON":"OFF"));}
 document.getElementById("exitBtn").onclick=()=>{menuActive=false; menuOverlay.style.display="none"; gameScreen.classList.remove("active"); startScreen.classList.add("active");}
 
-/* Game Logic Functions */
-function startGame(){clearInterval(spawnInt); clearInterval(timerInt); objs.forEach(o=>o.el.remove()); objs=[];score=0;mult=1;shield=false;shieldUsed=false;powerActive=null;timeLeft=diff.time; running=true; scoreEl.textContent="Score: 0"; multEl.textContent="Multiplier: x1"; timerEl.textContent="Time: "+timeLeft; shieldEl.style.display="none"; shieldBubble.style.display="none"; spawnInt=setInterval(()=>{if(!menuActive) spawnObj();},diff.spawn); timerInt=setInterval(()=>{if(!menuActive){timeLeft--; timerEl.textContent="Time: "+timeLeft;if(timeLeft<=0) endGame();}},1000);}
+/* Game Functions */
+function startGame(){
+  clearInterval(spawnInt); clearInterval(timerInt); objs.forEach(o=>o.el.remove()); objs=[];
+  score=0; mult=1; shield=false; shieldUsed=false; powerActive=null;
+  timeLeft=diff.time; running=true;
+  scoreEl.textContent="Score: 0"; multEl.textContent="Multiplier: x1";
+  if(diff.time>0){timerEl.style.display="block"; timerEl.textContent="Time: "+timeLeft;} else timerEl.textContent="∞";
+  shieldEl.style.display="none"; shieldBubble.style.display="none";
 
-function endGame(){running=false; clearInterval(spawnInt); clearInterval(timerInt); const high=Math.max(score,localStorage.getItem("ctgHigh")||0); localStorage.setItem("ctgHigh",high); document.getElementById("finalScore").textContent="Final Score: "+score; document.getElementById("highScore").textContent="High Score: "+high; gameScreen.classList.remove("active"); endScreen.classList.add("active");}
+  spawnInt=setInterval(()=>{if(!menuActive) spawnObj();},diff.spawn);
+  if(diff.time>0) timerInt=setInterval(()=>{if(!menuActive){timeLeft--; timerEl.textContent="Time: "+timeLeft;if(timeLeft<=0) endGame();}},1000);
+}
 
-function spawnObj(){if(!running)return;const rnd=Math.random();let el,isBomb=false;if(rnd<diff.bomb){el=document.createElement("div");el.className="bomb";isBomb=true;}else if(rnd<diff.bomb+0.08){el=document.createElement("div");const types=["power-multiplier","power-time","power-magnet"];const t=types[Math.floor(Math.random()*types.length)];el.className="powerup "+t;el.dataset.type=t.split("-")[1];el.textContent=el.dataset.type==="multiplier"?"x2":el.dataset.type==="time"?"+5":"M";}else{el=document.createElement("div");el.className="gift";el.innerHTML='<div class="ribbon-v"></div><div class="ribbon-h"></div><div class="bow"></div>';}
-el.style.left=Math.random()*(window.innerWidth-50)+"px";el.style.top="-60px";gameArea.appendChild(el);objs.push({el,isBomb});}
+function endGame(){running=false; clearInterval(spawnInt); clearInterval(timerInt);
+const high=Math.max(score,localStorage.getItem("ctgHigh")||0); localStorage.setItem("ctgHigh",high);
+document.getElementById("finalScore").textContent="Final Score: "+score;
+document.getElementById("highScore").textContent="High Score: "+high;
+gameScreen.classList.remove("active"); endScreen.classList.add("active");
+}
 
-function update(){if(running&&!menuActive){objs.forEach((o,i)=>{o.el.style.top=o.el.offsetTop+diff.speed+"px";const r=o.el.getBoundingClientRect(),p=player.getBoundingClientRect();if(r.bottom>=p.top&&r.left<p.right&&r.right>p.left){if(o.isBomb){document.body.classList.add("shake");setTimeout(()=>document.body.classList.remove("shake"),300);bombSound();if(navigator.vibrate) navigator.vibrate(200);if(shield){shield=false;shieldUsed=true;shieldEl.style.display="none";shieldBubble.style.display="none";}else endGame();}else if(o.el.classList.contains("powerup")){const type=o.el.dataset.type;if(powerTimer)clearTimeout(powerTimer);if(type==="multiplier"){powerActive="mult";multEl.textContent="Multiplier: x"+mult+" (x2)";}else if(type==="time"){timeLeft+=5;timerEl.textContent="Time: "+timeLeft;}else if(type==="magnet"){powerActive="magnet";}powerTimer=setTimeout(()=>{powerActive=null;multEl.textContent="Multiplier: x"+mult;},type==="time"?0:5000);beep(1000);}else{score+=powerActive==="mult"?mult*2:mult;mult++;if(powerActive!=="mult")multEl.textContent="Multiplier: x"+mult;if(score>=500&&!shieldUsed&&!shield){shield=true;shieldEl.style.display="block";shieldBubble.style.display="block";beep(900);}scoreEl.textContent="Score: "+score;beep(600);}o.el.remove();objs.splice(i,1);}else if(o.el.offsetTop>window.innerHeight){if(!o.isBomb&&!o.el.classList.contains("powerup")){mult=1;multEl.textContent="Multiplier: x1";}o.el.remove();objs.splice(i,1);}if(powerActive==="magnet"&&!o.isBomb&&!o.el.classList.contains("powerup")){const dx=(p.left+p.width/2)-(o.el.offsetLeft+22);o.el.style.left=(o.el.offsetLeft+dx*0.05)+"px";}});}requestAnimationFrame(update);}update();
+/* Spawn Objects */
+function spawnObj(){if(!running)return;
+  const rnd=Math.random(); let el,isBomb=false;
+  if(rnd<diff.bomb){ el=document.createElement("div"); el.className="bomb"; isBomb=true;}
+  else if(rnd<diff.bomb+0.08){ el=document.createElement("div"); const types=["power-multiplier","power-time","power-magnet"]; const t=types[Math.floor(Math.random()*types.length)]; el.className="powerup "+t; el.dataset.type=t.split("-")[1]; el.textContent=el.dataset.type==="multiplier"?"x2":el.dataset.type==="time"?"+5":"M";}
+  else{ el=document.createElement("div"); el.className="gift"; el.innerHTML='<div class="ribbon-v"></div><div class="ribbon-h"></div><div class="bow"></div>';}
+  el.style.left=Math.random()*(window.innerWidth-50)+"px"; el.style.top="-60px"; gameArea.appendChild(el); objs.push({el,isBomb});
+}
+
+/* Sparkle Effect */
+function createSparkle(x,y){
+  const s=document.createElement("div"); s.className="sparkle"; s.style.left=x+"px"; s.style.top=y+"px"; gameArea.appendChild(s);
+  setTimeout(()=>s.remove(),500);
+}
+
+/* Update Loop */
+function update(){if(running&&!menuActive){
+objs.forEach((o,i)=>{
+  o.el.style.top=o.el.offsetTop+diff.speed+"px";
+  const r=o.el.getBoundingClientRect(),p=player.getBoundingClientRect();
+  if(r.bottom>=p.top && r.left<p.right && r.right>p.left){
+    if(o.isBomb){document.body.classList.add("shake");setTimeout(()=>document.body.classList.remove("shake"),300);bombSound();if(navigator.vibrate) navigator.vibrate(200);if(shield){shield=false;shieldUsed=true;shieldEl.style.display="none";shieldBubble.style.display="none";}else endGame();}
+    else if(o.el.classList.contains("powerup")){
+      const type=o.el.dataset.type;
+      if(powerTimer) clearTimeout(powerTimer);
+      if(type==="multiplier"){powerActive="mult"; multEl.textContent="Multiplier: x"+mult+" (x2)";}
+      else if(type==="time"){timeLeft+=5;if(diff.time>0)timerEl.textContent="Time: "+timeLeft;}
+      else if(type==="magnet"){powerActive="magnet";}
+      powerTimer=setTimeout(()=>{powerActive=null; multEl.textContent="Multiplier: x"+mult;}, type==="time"?0:5000);
+      beep(1000);
+    } else {score+=powerActive==="mult"?mult*2:mult; mult++; if(powerActive!=="mult") multEl.textContent="Multiplier: x"+mult;
+      if(score>=500&&!shieldUsed&&!shield){shield=true;shieldEl.style.display="block";shieldBubble.style.display="block"; beep(900);}
+      scoreEl.textContent="Score: "+score; beep(600);
+      createSparkle(o.el.offsetLeft+22,o.el.offsetTop+22); // Sparkle
+    }
+    o.el.remove(); objs.splice(i,1);
+  } else if(o.el.offsetTop>window.innerHeight){ if(!o.isBomb&&!o.el.classList.contains("powerup")){mult=1; multEl.textContent="Multiplier: x1";} o.el.remove(); objs.splice(i,1);}
+  if(powerActive==="magnet"&&!o.isBomb&&!o.el.classList.contains("powerup")){const dx=(p.left+p.width/2)-(o.el.offsetLeft+22); o.el.style.left=(o.el.offsetLeft+dx*0.05)+"px";}
+});} requestAnimationFrame(update);}update();
 
 /* Player Movement */
 let px=window.innerWidth/2;
