@@ -1,46 +1,348 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Catch the Gifts</title>
-  <link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8">
+<title>Catch the Gifts</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+  height: 100vh;
+  background: linear-gradient(#0b1d3a, #112b55);
+  color: #fff;
+  overflow: hidden;
+}
+
+/* Screens */
+.screen {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  z-index: 2;
+}
+.screen.active { display: flex; }
+
+h1, h2 { margin-bottom: 20px; }
+
+button {
+  padding: 12px 24px;
+  font-size: 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: #fff;
+  color: #000;
+  margin-top: 10px;
+}
+
+/* Game */
+#gameArea {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.hud {
+  position: absolute;
+  top: 10px;
+  left: 0;
+  right: 0;
+  padding: 0 20px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 18px;
+  z-index: 5;
+}
+
+#multiplier {
+  position: absolute;
+  top: 45px;
+  left: 20px;
+  font-size: 16px;
+  opacity: 0.9;
+}
+
+#fullscreenBtn {
+  position: absolute;
+  top: 40px;
+  right: 20px;
+  font-size: 14px;
+  padding: 6px 12px;
+}
+
+/* Player */
+#player {
+  position: absolute;
+  bottom: 20px;
+  width: 110px;
+  height: 16px;
+  background: #ffffff;
+  border-radius: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Realistic Gift */
+.gift {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  background: linear-gradient(145deg, #ff5a5a, #b30000);
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.15),
+              0 4px 8px rgba(0,0,0,0.4);
+}
+
+.gift .ribbon-vert {
+  position: absolute;
+  width: 8px;
+  height: 100%;
+  background: linear-gradient(#ffd700, #e6b800);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.gift .ribbon-horiz {
+  position: absolute;
+  height: 8px;
+  width: 100%;
+  background: linear-gradient(#ffd700, #e6b800);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.gift .bow {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  width: 20px;
+  height: 12px;
+  transform: translateX(-50%);
+}
+
+.bow::before, .bow::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 12px;
+  background: #ffd700;
+  border-radius: 50% 50% 0 0;
+}
+
+.bow::before { left: 0; }
+.bow::after { right: 0; }
+
+/* Snow */
+#snow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.snowflake {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: white;
+  border-radius: 50%;
+  opacity: 0.8;
+  animation: fall linear infinite;
+}
+
+@keyframes fall {
+  from { transform: translateY(-10px); }
+  to { transform: translateY(110vh); }
+}
+</style>
 </head>
+
 <body>
 
-  <!-- Snow Background -->
-  <div id="snow"></div>
+<div id="snow"></div>
 
-  <!-- Start Screen -->
-  <div id="startScreen" class="screen active">
-    <h1>Catch the Gifts</h1>
-    <div class="difficulty">
-      <label><input type="radio" name="difficulty" value="easy" checked> Easy</label>
-      <label><input type="radio" name="difficulty" value="normal"> Normal</label>
-      <label><input type="radio" name="difficulty" value="hard"> Hard</label>
-    </div>
-    <button id="startBtn">Start Game</button>
+<!-- Start -->
+<div id="startScreen" class="screen active">
+  <h1>Catch the Gifts</h1>
+  <label><input type="radio" name="difficulty" value="easy" checked> Easy</label>
+  <label><input type="radio" name="difficulty" value="normal"> Normal</label>
+  <label><input type="radio" name="difficulty" value="hard"> Hard</label>
+  <button id="startBtn">Start Game</button>
+</div>
+
+<!-- Game -->
+<div id="gameScreen" class="screen">
+  <div class="hud">
+    <div id="score">Score: 0</div>
+    <div id="timer">Time: 30</div>
   </div>
-
-  <!-- Game Screen -->
-  <div id="gameScreen" class="screen">
-    <div class="hud">
-      <div id="score">Score: 0</div>
-      <div id="timer">Time: 30</div>
-    </div>
-    <div id="gameArea">
-      <div id="player"></div>
-    </div>
+  <div id="multiplier">Multiplier: x1</div>
+  <button id="fullscreenBtn">Fullscreen</button>
+  <div id="gameArea">
+    <div id="player"></div>
   </div>
+</div>
 
-  <!-- End Screen -->
-  <div id="endScreen" class="screen">
-    <h2>Game Over</h2>
-    <p id="finalScore"></p>
-    <p id="highScore"></p>
-    <button id="playAgainBtn">Play Again</button>
-  </div>
+<!-- End -->
+<div id="endScreen" class="screen">
+  <h2>Game Over</h2>
+  <p id="finalScore"></p>
+  <p id="highScore"></p>
+  <button id="playAgainBtn">Play Again</button>
+</div>
 
-  <script src="script.js"></script>
+<script>
+/* Audio */
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function beep(freq, dur=0.1) {
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.frequency.value = freq;
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+  osc.stop(audioCtx.currentTime + dur);
+}
+
+/* Elements */
+const startScreen = document.getElementById("startScreen");
+const gameScreen = document.getElementById("gameScreen");
+const endScreen = document.getElementById("endScreen");
+const player = document.getElementById("player");
+const gameArea = document.getElementById("gameArea");
+
+const scoreEl = document.getElementById("score");
+const timerEl = document.getElementById("timer");
+const multEl = document.getElementById("multiplier");
+
+let score = 0, multiplier = 1, timeLeft = 30;
+let gifts = [], spawnInterval, timerInterval;
+
+const difficulties = {
+  easy: { speed: 2, spawn: 900 },
+  normal: { speed: 4, spawn: 600 },
+  hard: { speed: 6, spawn: 400 }
+};
+let diff;
+
+/* Start */
+document.getElementById("startBtn").onclick = () => {
+  diff = difficulties[document.querySelector('input[name="difficulty"]:checked').value];
+  startScreen.classList.remove("active");
+  gameScreen.classList.add("active");
+  startGame();
+};
+
+/* Fullscreen */
+document.getElementById("fullscreenBtn").onclick = () => {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+  else document.exitFullscreen();
+};
+
+function startGame() {
+  score = 0; multiplier = 1; timeLeft = 30;
+  scoreEl.textContent = "Score: 0";
+  multEl.textContent = "Multiplier: x1";
+  timerEl.textContent = "Time: 30";
+  gifts.forEach(g => g.remove());
+  gifts = [];
+
+  spawnInterval = setInterval(spawnGift, diff.spawn);
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    timerEl.textContent = "Time: " + timeLeft;
+    if (timeLeft <= 0) endGame();
+  }, 1000);
+}
+
+function endGame() {
+  clearInterval(spawnInterval);
+  clearInterval(timerInterval);
+
+  const high = Math.max(score, localStorage.getItem("ctgHigh") || 0);
+  localStorage.setItem("ctgHigh", high);
+
+  document.getElementById("finalScore").textContent = "Final Score: " + score;
+  document.getElementById("highScore").textContent = "High Score: " + high;
+
+  gameScreen.classList.remove("active");
+  endScreen.classList.add("active");
+}
+
+/* Gifts */
+function spawnGift() {
+  const g = document.createElement("div");
+  g.className = "gift";
+  g.innerHTML = `
+    <div class="ribbon-vert"></div>
+    <div class="ribbon-horiz"></div>
+    <div class="bow"></div>`;
+  g.style.left = Math.random() * (window.innerWidth - 44) + "px";
+  g.style.top = "-50px";
+  gameArea.appendChild(g);
+  gifts.push(g);
+}
+
+function updateGifts() {
+  gifts.forEach((g, i) => {
+    g.style.top = g.offsetTop + diff.speed + "px";
+
+    const gr = g.getBoundingClientRect();
+    const pr = player.getBoundingClientRect();
+
+    if (gr.bottom >= pr.top && gr.left < pr.right && gr.right > pr.left) {
+      score += multiplier;
+      multiplier++;
+      scoreEl.textContent = "Score: " + score;
+      multEl.textContent = "Multiplier: x" + multiplier;
+      beep(600);
+      g.remove(); gifts.splice(i, 1);
+    }
+
+    if (g.offsetTop > window.innerHeight) {
+      multiplier = 1;
+      multEl.textContent = "Multiplier: x1";
+      beep(200, 0.15);
+      g.remove(); gifts.splice(i, 1);
+    }
+  });
+  requestAnimationFrame(updateGifts);
+}
+updateGifts();
+
+/* Player control */
+let px = window.innerWidth / 2;
+document.addEventListener("mousemove", e => px = e.clientX);
+document.addEventListener("touchmove", e => px = e.touches[0].clientX);
+function movePlayer() {
+  const half = player.offsetWidth / 2;
+  player.style.left = Math.max(half, Math.min(window.innerWidth - half, px)) + "px";
+  requestAnimationFrame(movePlayer);
+}
+movePlayer();
+
+/* Snow */
+const snow = document.getElementById("snow");
+for (let i = 0; i < 80; i++) {
+  const f = document.createElement("div");
+  f.className = "snowflake";
+  f.style.left = Math.random() * 100 + "vw";
+  f.style.animationDuration = 5 + Math.random() * 5 + "s";
+  f.style.animationDelay = Math.random() * 5 + "s";
+  snow.appendChild(f);
+}
+</script>
+
 </body>
 </html>
