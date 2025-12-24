@@ -15,6 +15,7 @@ body{height:100vh;background:linear-gradient(#0b1d3a,#112b55);color:#fff;overflo
 
 button{padding:12px 24px;font-size:16px;border:none;border-radius:6px;cursor:pointer;background:#fff;color:#000;margin-top:10px}
 
+/* Game */
 #gameArea{position:relative;width:100%;height:100%}
 
 .hud{position:absolute;top:10px;left:0;right:0;padding:0 20px;display:flex;justify-content:space-between;font-size:18px;z-index:5}
@@ -25,12 +26,32 @@ button{padding:12px 24px;font-size:16px;border:none;border-radius:6px;cursor:poi
 #player{position:absolute;bottom:20px;width:110px;height:16px;background:#fff;border-radius:10px;left:50%;transform:translateX(-50%)}
 
 /* Gift */
-.gift{position:absolute;width:44px;height:44px;border-radius:6px;background:linear-gradient(145deg,#ff5a5a,#b30000);box-shadow:0 4px 8px rgba(0,0,0,.4)}
+.gift{
+  position:absolute;width:44px;height:44px;border-radius:6px;
+  background:linear-gradient(145deg,#ff5a5a,#b30000);
+  box-shadow:0 4px 8px rgba(0,0,0,.4)
+}
 .ribbon-vert{position:absolute;width:8px;height:100%;background:#ffd700;left:50%;transform:translateX(-50%)}
 .ribbon-horiz{position:absolute;height:8px;width:100%;background:#ffd700;top:50%;transform:translateY(-50%)}
 .bow{position:absolute;top:-6px;left:50%;width:20px;height:12px;transform:translateX(-50%)}
-.bow:before,.bow:after{content:"";position:absolute;width:10px;height:12px;background:#ffd700;border-radius:50% 50% 0 0}
+.bow:before,.bow:after{
+  content:"";position:absolute;width:10px;height:12px;background:#ffd700;border-radius:50% 50% 0 0
+}
 .bow:before{left:0}.bow:after{right:0}
+
+/* Bomb */
+.bomb{
+  position:absolute;width:42px;height:42px;border-radius:50%;
+  background:radial-gradient(circle at 30% 30%, #555, #000);
+  box-shadow:0 4px 10px rgba(0,0,0,.8)
+}
+.bomb::after{
+  content:"";
+  position:absolute;
+  top:18px;left:6px;
+  width:30px;height:6px;
+  background:#ff3333;
+}
 
 /* Snow */
 #snow{position:absolute;inset:0;pointer-events:none;z-index:1}
@@ -43,6 +64,7 @@ button{padding:12px 24px;font-size:16px;border:none;border-radius:6px;cursor:poi
 
 <div id="snow"></div>
 
+<!-- Start -->
 <div id="startScreen" class="screen active">
   <h1>Catch the Gifts</h1>
   <label><input type="radio" name="difficulty" value="easy" checked> Easy</label>
@@ -51,6 +73,7 @@ button{padding:12px 24px;font-size:16px;border:none;border-radius:6px;cursor:poi
   <button id="startBtn">Start Game</button>
 </div>
 
+<!-- Game -->
 <div id="gameScreen" class="screen">
   <div class="hud">
     <div id="score">Score: 0</div>
@@ -63,6 +86,7 @@ button{padding:12px 24px;font-size:16px;border:none;border-radius:6px;cursor:poi
   </div>
 </div>
 
+<!-- End -->
 <div id="endScreen" class="screen">
   <h2>Game Over</h2>
   <p id="finalScore"></p>
@@ -71,10 +95,10 @@ button{padding:12px 24px;font-size:16px;border:none;border-radius:6px;cursor:poi
 </div>
 
 <script>
-/* AUDIO FIX */
-const AudioCtx = window.AudioContext || window.webkitAudioContext;
-const audioCtx = new AudioCtx();
-function beep(freq,d=0.1){
+/* AUDIO */
+const AudioCtx=window.AudioContext||window.webkitAudioContext;
+const audioCtx=new AudioCtx();
+function beep(freq,d=0.15){
   if(audioCtx.state==="suspended") audioCtx.resume();
   const o=audioCtx.createOscillator(),g=audioCtx.createGain();
   o.frequency.value=freq;o.connect(g);g.connect(audioCtx.destination);
@@ -94,9 +118,8 @@ const timerEl=document.getElementById("timer");
 const multEl=document.getElementById("multiplier");
 
 let score=0,multiplier=1,timeLeft=30;
-let gifts=[],spawnInterval=null,timerInterval=null;
-let diff=null;
-let running=false;
+let objects=[],spawnInterval=null,timerInterval=null;
+let diff=null,running=false;
 
 const difficulties={
   easy:{speed:2,spawn:900},
@@ -104,7 +127,7 @@ const difficulties={
   hard:{speed:6,spawn:400}
 };
 
-/* START GAME */
+/* START */
 document.getElementById("startBtn").onclick=()=>{
   diff=difficulties[document.querySelector('input[name="difficulty"]:checked').value];
   startScreen.classList.remove("active");
@@ -112,27 +135,24 @@ document.getElementById("startBtn").onclick=()=>{
   startGame();
 };
 
-/* PLAY AGAIN FIX */
+/* PLAY AGAIN */
 document.getElementById("playAgainBtn").onclick=()=>{
   endScreen.classList.remove("active");
   startScreen.classList.add("active");
 };
 
-/* FULLSCREEN FIX */
+/* FULLSCREEN */
 document.getElementById("fullscreenBtn").onclick=()=>{
   if(audioCtx.state==="suspended") audioCtx.resume();
-  if(!document.fullscreenElement){
-    document.documentElement.requestFullscreen().catch(()=>{});
-  }else{
-    document.exitFullscreen();
-  }
+  if(!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
+  else document.exitFullscreen();
 };
 
 function startGame(){
   clearInterval(spawnInterval);
   clearInterval(timerInterval);
-  gifts.forEach(g=>g.remove());
-  gifts=[];
+  objects.forEach(o=>o.el.remove());
+  objects=[];
   score=0;multiplier=1;timeLeft=30;
   running=true;
 
@@ -140,7 +160,7 @@ function startGame(){
   multEl.textContent="Multiplier: x1";
   timerEl.textContent="Time: 30";
 
-  spawnInterval=setInterval(spawnGift,diff.spawn);
+  spawnInterval=setInterval(spawnObject,diff.spawn);
   timerInterval=setInterval(()=>{
     timeLeft--;
     timerEl.textContent="Time: "+timeLeft;
@@ -163,41 +183,55 @@ function endGame(){
   endScreen.classList.add("active");
 }
 
-/* GIFTS */
-function spawnGift(){
+/* SPAWN OBJECTS */
+function spawnObject(){
   if(!running) return;
-  const g=document.createElement("div");
-  g.className="gift";
-  g.innerHTML='<div class="ribbon-vert"></div><div class="ribbon-horiz"></div><div class="bow"></div>';
-  g.style.left=Math.random()*(innerWidth-44)+"px";
-  g.style.top="-50px";
-  gameArea.appendChild(g);
-  gifts.push(g);
+
+  const isBomb=Math.random()<0.15; // 15% bombs
+  const el=document.createElement("div");
+  el.className=isBomb?"bomb":"gift";
+
+  if(!isBomb){
+    el.innerHTML='<div class="ribbon-vert"></div><div class="ribbon-horiz"></div><div class="bow"></div>';
+  }
+
+  el.style.left=Math.random()*(innerWidth-44)+"px";
+  el.style.top="-50px";
+  gameArea.appendChild(el);
+  objects.push({el,isBomb});
 }
 
-function updateGifts(){
+/* UPDATE */
+function updateObjects(){
   if(running){
-    gifts.forEach((g,i)=>{
-      g.style.top=g.offsetTop+diff.speed+"px";
-      const gr=g.getBoundingClientRect(),pr=player.getBoundingClientRect();
+    objects.forEach((o,i)=>{
+      o.el.style.top=o.el.offsetTop+diff.speed+"px";
+      const r=o.el.getBoundingClientRect();
+      const p=player.getBoundingClientRect();
 
-      if(gr.bottom>=pr.top&&gr.left<pr.right&&gr.right>pr.left){
-        score+=multiplier;multiplier++;
-        scoreEl.textContent="Score: "+score;
-        multEl.textContent="Multiplier: x"+multiplier;
-        beep(600);
-        g.remove();gifts.splice(i,1);
-      }else if(g.offsetTop>innerHeight){
-        multiplier=1;
-        multEl.textContent="Multiplier: x1";
-        beep(200,0.15);
-        g.remove();gifts.splice(i,1);
+      if(r.bottom>=p.top&&r.left<p.right&&r.right>p.left){
+        if(o.isBomb){
+          beep(120,0.3);
+          endGame();
+        }else{
+          score+=multiplier;multiplier++;
+          scoreEl.textContent="Score: "+score;
+          multEl.textContent="Multiplier: x"+multiplier;
+          beep(600);
+          o.el.remove();objects.splice(i,1);
+        }
+      }else if(o.el.offsetTop>innerHeight){
+        if(!o.isBomb){
+          multiplier=1;
+          multEl.textContent="Multiplier: x1";
+        }
+        o.el.remove();objects.splice(i,1);
       }
     });
   }
-  requestAnimationFrame(updateGifts);
+  requestAnimationFrame(updateObjects);
 }
-updateGifts();
+updateObjects();
 
 /* PLAYER */
 let px=innerWidth/2;
@@ -220,5 +254,6 @@ for(let i=0;i<80;i++){
   snow.appendChild(f);
 }
 </script>
+
 </body>
 </html>
